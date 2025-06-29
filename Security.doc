@@ -1,0 +1,114 @@
+🧹 What is Sanitization?
+Sanitization means cleaning or escaping potentially dangerous input, especially:
+Scripts (<script>)
+SQL injection ('; DROP TABLE users;--)
+HTML content (XSS attacks)
+In Spring Boot:
+If you're not rendering HTML (e.g., only JSON), sanitization is less of a concern
+Still, you should avoid blindly trusting input, especially for:
+Search
+Logging
+Sending emails
+Uploading files
+You can sanitize manually using libraries like:
+Apache Commons StringEscapeUtils
+ESAPI
+JSoup (for HTML input)
+
+
+
+❌ Invalidate Tokens on Logout or Password Change
+Problem:
+JWTs are stateless — the server does not store them. So if a token is issued and:
+The user logs out
+The user changes their password
+Their account is disabled
+🚫 The old token still works until it expires.
+
+✅ Solutions:
+1. Use a Token Blacklist (Database or Cache)
+Store active tokens or their IDs (jti) in Redis or DB. 
+On logout, delete the token from that store. 
+On every request, check if token is blacklisted. 
+if (blacklist.contains(jwtId)) {
+   throw new UnauthorizedException("Token is revoked.");
+}
+This solves:
+Logout invalidation
+Forceful logouts by admin
+Token revocation after suspicious activity
+
+2. Rotate Tokens on Password Change
+On password change:
+Invalidate old tokens (blacklist or use tokenVersion)
+Force user to log in again
+
+3. Add a field like tokenVersion to User
+Include tokenVersion in JWT claim
+If user changes password, increment the field in DB
+On request, compare token’s version vs DB version
+
+
+
+
+🔐 4. Security Headers
+Add HTTP headers to protect against XSS, clickjacking, etc.
+
+http.headers(headers -> headers
+    .contentSecurityPolicy("default-src 'self'")
+    .xssProtection(xss -> xss.block(true))
+    .frameOptions(frame -> frame.sameOrigin())
+);
+
+
+
+🔐 5. Role-Based Access Control (RBAC)
+✅ You’ve added roles — use @PreAuthorize to protect specific actions.
+
+Example:
+@PreAuthorize("hasRole('ADMIN')")
+public ResponseEntity<?> deleteUser(...) { ... }
+
+
+
+🔐 6. Account Lockout & Login Attempt Throttling
+🚫 Prevent brute-force attacks by:
+Limiting login attempts
+Locking account temporarily after 5-10 failed logins
+(Can be done using Redis or DB flags)
+
+
+.
+
+🔐 8. Database Security
+🔐 Use strong DB passwords and restrict DB access only to backend server.
+🎯 Limit privileges of the PostgreSQL user (avoid superuser rights).
+🧹 Enable automatic cleanup of old OTP tokens, stale sessions, logs.
+
+
+
+🔐 9. Email Abuse Protection
+⏳ Throttle OTP/email requests to avoid spam.
+🔐 Use rate-limiting or cooldown logic (e.g., max 3 OTPs per 15 mins).
+🔐 10. Sensitive Data Masking
+Avoid exposing sensitive fields (e.g., password hashes, tokens) in any response.
+Use DTOs to prevent accidental field leaks from entities.
+
+
+Bonus: OWASP Recommendations
+You may also check:
+✅ OWASP Top 10
+Use tools like Spring Security Audit, SonarQube, or dependency checkers
+
+
+
+🔐 1. Account Security Enhancements
+⏳ OTP Throttling & Rate Limiting
+Limit OTP resend attempts (e.g., 3 times within 15 mins).
+
+Add tracking in DB or use in-memory cache like Redis.
+
+👮 Login Attempt Limiting
+Block login after 5 failed attempts for 15 mins to prevent brute-force attacks.
+
+Use a combination of IP address + email tracking.

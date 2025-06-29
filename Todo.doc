@@ -1,0 +1,33 @@
+📬 2. Email Templates Enhancement 
+You already have: 
+otp-verification.html 
+password-reset.html 
+password-reset-success.html 
+account-alert.html 
+welcome.html 
+Add: 
+🎉 Password changed alert (in case of suspicious activity) 
+❌ Account deactivation confirmation 
+🔄 Email update confirmation
+
+
+👤 3. Profile Module
+Add GET /api/users/me to fetch logged-in user data.
+
+Add PUT /api/users/me to update:
+
+name
+
+phone
+
+(optionally) password (with old password verification)
+
+Okay so we are going to now implement the functionality of Update profile for user.
+
+Three new fields we are going to take from user which is gender, dob and profile pic.
+
+User cannot and will never be able to update email(Admin can but will implement admin later).
+
+User can update name, phone, dob, gender and password.
+
+For updating the password user has to provide old and new password to update the password.
