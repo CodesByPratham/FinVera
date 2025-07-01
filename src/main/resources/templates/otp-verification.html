@@ -36,9 +36,9 @@
 
 <body>
     <div class="card">
-        <h2>Hello, ${name} 👋</h2>
+        <h2>Hello, <span th:text="${name}"></span> 👋</h2>
         <p>Use the OTP below to verify your account:</p>
-        <p class="otp">${otp}</p>
+        <p class="otp" th:text="${otp}"></p>
         <p>This OTP will expire in 5 minutes.</p>
         <div class="footer">If this wasn’t you, ignore this message.<br>— Finvera Security</div>
     </div>

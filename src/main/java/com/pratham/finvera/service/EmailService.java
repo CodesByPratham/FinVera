@@ -30,11 +30,15 @@ public class EmailService {
 
     // Specific method for OTP (calls the general one)
     public void sendOtpEmail(String toEmail, String otp, String name) {
-        sendEmail(
-                toEmail,
-                "Your OTP for Finvera Verification",
-                "otp-verification.html",
-                Map.of("otp", otp, "name", name));
+
+        Context context = new Context();
+
+        context.setVariable("name", name);
+        context.setVariable("otp", otp);
+
+        String htmlContent = templateEngine.process("otp-verification", context); // assumes otp-verification.html is in
+                                                                                  // src/main/resources/templates
+        sendHtmlEmail(toEmail, "OTP Verification", htmlContent);
     }
 
     public void sendWelcomeEmail(String toEmail, String name) {

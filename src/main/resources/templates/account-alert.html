@@ -25,7 +25,7 @@
 <body>
     <div class="alert">
         <h3>⚠️ Security Alert</h3>
-        <p>Hello ${name}, we noticed a login from a new device or location.</p>
+        <p>Hello <span th:text="${name}"></span>, we noticed a login from a new device or location.</p>
         <p>If this was you, no action needed. Otherwise, we recommend resetting your password.</p>
     </div>
 </body>
