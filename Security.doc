@@ -75,10 +75,13 @@ public ResponseEntity<?> deleteUser(...) { ... }
 🚫 Prevent brute-force attacks by:
 Limiting login attempts
 Locking account temporarily after 5-10 failed logins
+Rate Limiting OTP Requests (Forgot & Resend)
+How: Track OTP generation attempts (e.g., max 5 per hour).
+Where: In forgotPassword() and resendOtp().
 (Can be done using Redis or DB flags)
+Use a combination of IP address + email tracking.
 
 
-.
 
 🔐 8. Database Security
 🔐 Use strong DB passwords and restrict DB access only to backend server.
@@ -89,7 +92,7 @@ Locking account temporarily after 5-10 failed logins
 
 🔐 9. Email Abuse Protection
 ⏳ Throttle OTP/email requests to avoid spam.
-🔐 Use rate-limiting or cooldown logic (e.g., max 3 OTPs per 15 mins).
+🔐 Use rate-limiting or cool down logic (e.g., max 3 OTPs per 15 mins).
 🔐 10. Sensitive Data Masking
 Avoid exposing sensitive fields (e.g., password hashes, tokens) in any response.
 Use DTOs to prevent accidental field leaks from entities.
@@ -99,16 +102,3 @@ Bonus: OWASP Recommendations
 You may also check:
 ✅ OWASP Top 10
 Use tools like Spring Security Audit, SonarQube, or dependency checkers
-
-
-
-🔐 1. Account Security Enhancements
-⏳ OTP Throttling & Rate Limiting
-Limit OTP resend attempts (e.g., 3 times within 15 mins).
-
-Add tracking in DB or use in-memory cache like Redis.
-
-👮 Login Attempt Limiting
-Block login after 5 failed attempts for 15 mins to prevent brute-force attacks.
-
-Use a combination of IP address + email tracking.

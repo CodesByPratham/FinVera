@@ -6,6 +6,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -29,15 +30,14 @@ public class EmailService {
     }
 
     // Specific method for OTP (calls the general one)
+    @Async
     public void sendOtpEmail(String toEmail, String otp, String name) {
-
         Context context = new Context();
 
         context.setVariable("name", name);
         context.setVariable("otp", otp);
 
-        String htmlContent = templateEngine.process("otp-verification", context); // assumes otp-verification.html is in
-                                                                                  // src/main/resources/templates
+        String htmlContent = templateEngine.process("otp-verification", context);
         sendHtmlEmail(toEmail, "OTP Verification", htmlContent);
     }
 

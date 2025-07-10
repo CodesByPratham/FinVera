@@ -1,28 +1,20 @@
 package com.pratham.finvera.security;
 
 import com.pratham.finvera.entity.User;
-import com.pratham.finvera.entity.Role;
+import com.pratham.finvera.exception.UnauthorizedException;
+
 import lombok.AllArgsConstructor;
+
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.List;
 
 @AllArgsConstructor
 public class CustomUserDetails implements UserDetails {
 
     private final User user;
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        Set<Role> roles = user.getRoles();
-        return roles.stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName())) // e.g., ROLE_USER
-                .collect(Collectors.toSet());
-    }
 
     @Override
     public String getPassword() {
@@ -56,5 +48,10 @@ public class CustomUserDetails implements UserDetails {
 
     public User getUser() {
         return user;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(() -> "ROLE_USER");
     }
 }

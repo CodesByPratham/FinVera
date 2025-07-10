@@ -12,7 +12,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.pratham.finvera.utiil.JwtUtils;
+import com.pratham.finvera.util.JwtUtils;
 
 import java.io.IOException;
 
@@ -22,12 +22,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
     private final CustomUserDetailsService userDetailsService;
+    private final AdminDetailsService adminDetailsService;
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
         // Retrieves the Authorization header from the incoming HTTP request
         final String authHeader = request.getHeader("Authorization");
@@ -50,8 +49,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // If username is present and user not yet authenticated
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
+            UserDetails userDetails;
+            String role = jwtUtils.getRoleFromToken(token);
+            if ("ROLE_ADMIN".equals(role)) {
+                userDetails = adminDetailsService.loadUserByUsername(username);
+            } else {
+                userDetails = userDetailsService.loadUserByUsername(username);
+            }
+            
+            // Checks if the token is valid or not
             if (jwtUtils.isTokenValid(token)) {
                 // Creates a Spring Security authentication object
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails,
@@ -59,8 +66,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // Adds request-specific information to the authentication object (like IP
                 // address, session ID, etc.).
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request));
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 // Sets the current request as authenticated
                 SecurityContextHolder.getContext().setAuthentication(authToken);

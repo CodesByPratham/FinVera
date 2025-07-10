@@ -10,8 +10,8 @@ public class ResetPasswordRequest {
     @NotBlank(message = "Email is required")
     private String email;
 
-    @NotBlank(message = "OTP is required")
-    private String otp;
+    @NotBlank(message = "OTP session token is required")
+    private String otpSessionToken;
 
     @NotBlank(message = "New password is required")
     @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&]).{6,}$", message = "Password must have at least 6 characters, including uppercase, lowercase, digit, and special character")

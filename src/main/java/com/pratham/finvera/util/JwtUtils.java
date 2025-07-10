@@ -1,4 +1,4 @@
-package com.pratham.finvera.utiil;
+package com.pratham.finvera.util;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
@@ -21,9 +21,10 @@ public class JwtUtils {
     private long jwtExpirationMs;
 
     // Generate JWT token
-    public String generateToken(String username) {
+    public String generateToken(String email, String role) {
         return Jwts.builder()
-                .subject(username)
+                .subject(email)
+                .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(getSigningKey())
@@ -56,5 +57,9 @@ public class JwtUtils {
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+    }
+
+    public String getRoleFromToken(String token) {
+        return parseClaims(token).get("role", String.class);
     }
 }

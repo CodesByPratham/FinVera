@@ -2,6 +2,7 @@ package com.pratham.finvera.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
@@ -34,6 +35,11 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
     }
 
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<MessageResponse> handleDisabledUser(DisabledException ex, WebRequest req) {
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Account not verified. Please verify OTP first.");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<MessageResponse> handleValidationException(MethodArgumentNotValidException ex) {
         String errorMessages = ex.getBindingResult().getFieldErrors().stream()
@@ -56,5 +62,4 @@ public class GlobalExceptionHandler {
                 .build();
         return new ResponseEntity<>(response, status);
     }
-
 }

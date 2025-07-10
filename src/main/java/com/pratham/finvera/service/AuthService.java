@@ -6,41 +6,50 @@ import com.pratham.finvera.dto.RegisterRequest;
 import com.pratham.finvera.dto.ResendOtpRequest;
 import com.pratham.finvera.dto.ResetPasswordRequest;
 import com.pratham.finvera.dto.VerifyOtpRequest;
+import com.pratham.finvera.entity.Admin;
 import com.pratham.finvera.entity.OtpToken;
-import com.pratham.finvera.entity.Role;
 import com.pratham.finvera.entity.User;
+import com.pratham.finvera.enums.OtpPurpose;
 import com.pratham.finvera.exception.BadRequestException;
 import com.pratham.finvera.exception.ResourceNotFoundException;
 import com.pratham.finvera.exception.UnauthorizedException;
 import com.pratham.finvera.payload.AuthResponse;
 import com.pratham.finvera.payload.MessageResponse;
+import com.pratham.finvera.payload.OtpVerifiedResponse;
 import com.pratham.finvera.payload.UserResponse;
+import com.pratham.finvera.repository.AdminRepository;
 import com.pratham.finvera.repository.OtpTokenRepository;
-import com.pratham.finvera.repository.RoleRepository;
 import com.pratham.finvera.repository.UserRepository;
-import com.pratham.finvera.utiil.JwtUtils;
+import com.pratham.finvera.security.AdminDetails;
+import com.pratham.finvera.security.CustomUserDetails;
+import com.pratham.finvera.util.JwtUtils;
+import com.pratham.finvera.util.OtpUtil;
 
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Collections;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
+    private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
+    private final OtpUtil otpUtil;
     private final OtpTokenRepository otpTokenRepository;
     private final EmailService emailService;
 
@@ -49,32 +58,25 @@ public class AuthService {
             throw new BadRequestException("Email is already in use.");
         }
 
-        Role userRole = roleRepository.findByName("ROLE_USER")
-                .orElseThrow(() -> new ResourceNotFoundException("Default role not found."));
-
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .isVerified(false) // set true after OTP later
-                .roles(Collections.singleton(userRole))
                 .build();
 
         userRepository.save(user);
 
-        // Generate OTP
-        String otp = String.valueOf((int) (Math.random() * 900000) + 100000);
-        OtpToken otpToken = OtpToken.builder()
-                .otp(otp)
-                .expiresAt(Instant.now().plusSeconds(300)) // 5 minutes
-                .user(user)
-                .build();
+        // Deletes existing OTP if any present
+        otpTokenRepository.findByUser(user).ifPresent(otpTokenRepository::delete);
 
+        // Generates and stores OTP
+        OtpToken otpToken = otpUtil.createOtpToken(user, OtpPurpose.REGISTER);
         otpTokenRepository.save(otpToken);
 
-        // Send email
-        emailService.sendOtpEmail(user.getEmail(), otp, user.getName());
+        // Sends OTP via mail
+        emailService.sendOtpEmail(user.getEmail(), otpToken.getOtp(), user.getName());
 
         return MessageResponse.builder()
                 .timestamp(Instant.now())
@@ -84,21 +86,31 @@ public class AuthService {
     }
 
     public MessageResponse verifyOtp(VerifyOtpRequest request) {
-        // Verify the user
+        // Verifies the user
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("User not found with email: " + request.getEmail() + "."));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with email: " + request.getEmail() + "."));
 
-        // Verify the OTP
-        OtpToken otpToken = otpTokenRepository.findByUserAndOtp(user, request.getOtp())
-                .orElseThrow(() -> new BadRequestException("OTP is valid."));
+        OtpPurpose purpose = request.getPurpose();
 
-        // Verify OTP expiration
+        // Verifies the OTP
+        OtpToken otpToken = otpTokenRepository.findByUserAndOtpAndPurpose(user, request.getOtp(), purpose)
+                .orElseThrow(() -> new BadRequestException("OTP is invalid."));
+
+        // Verifies OTP expiration
         if (otpToken.getExpiresAt().isBefore(Instant.now())) {
             otpTokenRepository.delete(otpToken); // clean up
             throw new BadRequestException("OTP has expired. Please request a new one.");
         }
 
+        return switch (purpose) {
+            case REGISTER -> handleRegisterOtpVerification(user, otpToken);
+            case FORGOT_PASSWORD -> handleForgotPasswordOtpVerification(user, otpToken);
+            default -> throw new BadRequestException("Unsupported OTP purpose.");
+        };
+    }
+
+    private MessageResponse handleRegisterOtpVerification(User user, OtpToken otpToken) {
         user.setVerified(true);
         userRepository.save(user);
         otpTokenRepository.delete(otpToken);
@@ -112,32 +124,41 @@ public class AuthService {
                 .build();
     }
 
+    private OtpVerifiedResponse handleForgotPasswordOtpVerification(User user, OtpToken otpToken) {
+        // Update token with session info and expiration
+        otpUtil.attachSessionToken(otpToken);
+
+        otpTokenRepository.save(otpToken);
+
+        return OtpVerifiedResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.OK)
+                .message("OTP verified.")
+                .otpSessionToken(otpToken.getOtpSessionToken())
+                .build();
+
+    }
+
     public MessageResponse resendOtp(ResendOtpRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("User not found with email: "
-                                + request.getEmail() + "."));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: "
+                        + request.getEmail() + "."));
 
-        if (user.isVerified()) {
+        OtpPurpose purpose = request.getPurpose();
+
+        if (purpose.equals(OtpPurpose.REGISTER) && user.isVerified()) {
             throw new BadRequestException("User is already verified.");
         }
 
-        // Delete old OTP if exists
+        // Deletes existing OTP for same purpose
         otpTokenRepository.findByUser(user).ifPresent(otpTokenRepository::delete);
 
-        // Generate new OTP
-        String otp = String.valueOf((int) (Math.random() * 900000) + 100000);
+        // Generates and stores OTP
+        OtpToken otpToken = otpUtil.createOtpToken(user, request.getPurpose());
+        otpTokenRepository.save(otpToken);
 
-        OtpToken newOtp = OtpToken.builder()
-                .otp(otp)
-                .expiresAt(Instant.now().plusSeconds(300)) // 5 minutes
-                .user(user)
-                .build();
-
-        otpTokenRepository.save(newOtp);
-
-        // Send new OTP via email
-        emailService.sendOtpEmail(user.getEmail(), otp, user.getName());
+        // Sends new OTP via email
+        emailService.sendOtpEmail(user.getEmail(), otpToken.getOtp(), user.getName());
 
         return MessageResponse.builder()
                 .timestamp(Instant.now())
@@ -147,48 +168,38 @@ public class AuthService {
     }
 
     public MessageResponse forgotPassword(ForgotPasswordRequest request) {
-
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("User not found with email: "
-                                + request.getEmail() + "."));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: "
+                        + request.getEmail() + "."));
 
-        // Delete old OTP if exists
+        // Deletes existing FORGOT_PASSWORD OTP if any present
         otpTokenRepository.findByUser(user).ifPresent(otpTokenRepository::delete);
 
-        // Generate new OTP token
-        String otp = String.valueOf((int) (Math.random() * 900000) + 100000);
-
-        OtpToken otpToken = OtpToken.builder()
-                .otp(otp)
-                .expiresAt(Instant.now().plusSeconds(300))
-                .user(user)
-                .build();
-
+        // Generates and stores OTP
+        OtpToken otpToken = otpUtil.createOtpToken(user, OtpPurpose.REGISTER);
         otpTokenRepository.save(otpToken);
 
-        emailService.sendOtpEmail(user.getEmail(), otp, user.getName());
+        // Sends new OTP via email
+        emailService.sendOtpEmail(user.getEmail(), otpToken.getOtp(), user.getName());
 
         return MessageResponse.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.OK)
                 .message("OTP sent to your email for password reset.")
                 .build();
-
     }
 
     public MessageResponse resetPassword(ResetPasswordRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("User not found with email: "
-                                + request.getEmail() + "."));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: "
+                        + request.getEmail() + "."));
 
-        OtpToken otpToken = otpTokenRepository.findByUserAndOtp(user, request.getOtp())
-                .orElseThrow(() -> new BadRequestException("OTP is invalid"));
+        OtpToken otpToken = otpTokenRepository.findByUserAndOtpSessionToken(user, request.getOtpSessionToken())
+                .orElseThrow(() -> new BadRequestException("Invalid OTP session token"));
 
         if (otpToken.getExpiresAt().isBefore(Instant.now())) {
-            otpTokenRepository.delete(otpToken);
-            throw new BadRequestException("OTP has expired. Please request a new one.");
+            otpTokenRepository.delete(otpToken); // Clean up expired token
+            throw new BadRequestException("OTP session token has expired.");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -203,31 +214,54 @@ public class AuthService {
     }
 
     public AuthResponse login(AuthRequest request) {
+
+        Authentication authentication;
+
         try {
-            authenticationManager.authenticate(
+            authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getEmail(), request.getPassword()));
-        } catch (AuthenticationException e) {
-            throw new UnauthorizedException("Invalid email or password.");
-        }
-
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("User not found with email: "
-                                + request.getEmail() + "."));
-
-        if (!user.isVerified()) {
+        } catch (DisabledException e) {
             throw new UnauthorizedException("Account not verified. Please verify OTP first.");
+        } catch (AuthenticationException e) {
+            throw new BadRequestException("Invalid email or password.");
         }
 
-        String token = jwtUtils.generateToken(user.getEmail());
+        User user = ((CustomUserDetails) authentication.getPrincipal()).getUser();
+
+        String token = jwtUtils.generateToken(user.getEmail(), "ROLE_USER");
 
         return AuthResponse.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.OK)
-                .message("Login Successful")
+                .message("Login Successful.")
                 .token(token)
                 .user(UserResponse.fromUser(user))
                 .build();
     }
+
+    public AuthResponse adminLogin(AuthRequest request) {
+        
+        Optional<Admin> adminOpt = adminRepository.findByEmail(request.getEmail());
+        boolean authenticated = adminOpt.isPresent()
+                && passwordEncoder.matches(request.getPassword(), adminOpt.get().getPassword());
+
+        if (!authenticated) {
+            throw new UnauthorizedException("Invalid admin email or password.");
+        }
+
+        Admin admin = adminRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Admin not found with email: " + request.getEmail()));
+
+        String token = jwtUtils.generateToken(admin.getEmail(), "ROLE_ADMIN");
+
+        return AuthResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.OK)
+                .message("Admin Login Successful.")
+                .token(token)
+                .user(null) // or you can create a separate AdminResponse DTO if needed
+                .build();
+    }
+
 }
