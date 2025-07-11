@@ -1,6 +1,5 @@
 package com.pratham.finvera.job;
 
-import com.pratham.finvera.config.OtpProperties;
 import com.pratham.finvera.entity.OtpToken;
 import com.pratham.finvera.repository.OtpTokenRepository;
 import lombok.RequiredArgsConstructor;
