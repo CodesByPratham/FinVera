@@ -1,7 +1,6 @@
 package com.pratham.finvera.security;
 
 import com.pratham.finvera.entity.User;
-import com.pratham.finvera.exception.UnauthorizedException;
 
 import lombok.AllArgsConstructor;
 

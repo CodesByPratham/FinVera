@@ -18,7 +18,6 @@ import java.util.List;
 public class OtpCleanupJob {
 
     private final OtpTokenRepository otpTokenRepository;
-    private final OtpProperties otpProperties;
 
     @Scheduled(fixedRateString = "#{@otpProperties.cleanupFixedRateMs}")
     public void cleanExpiredOtpTokens() {
