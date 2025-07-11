@@ -1,17 +1,44 @@
-{"properties": [
-  {
-    "name": "jwt.secret",
-    "type": "java.lang.String",
-    "description": "A description for 'jwt.secret'"
-  },
-  {
-    "name": "jwt.expiration",
-    "type": "java.lang.String",
-    "description": "A description for 'jwt.expiration'"
-  },
-  {
-    "name": "app.admin-emails",
-    "type": "java.lang.String",
-    "description": "A description for 'app.admin-emails'"
-  }
-]}
+{
+  "properties": [
+    {
+      "name": "admin.default.name",
+      "type": "java.lang.String",
+      "description": "Default name for admin."
+    },
+    {
+      "name": "admin.default.email",
+      "type": "java.lang.String",
+      "description": "Default email for admin."
+    },
+    {
+      "name": "admin.default.password",
+      "type": "java.lang.String",
+      "description": "Default password for admin."
+    },
+    {
+      "name": "otp.expiration",
+      "type": "java.lang.String",
+      "description": "OTP expiration time."
+    },
+    {
+      "name": "otp.cleanup.fixed.rate.ms",
+      "type": "java.lang.String",
+      "description": "Unused OTP cleanup fixed time rate."
+    },
+    {
+      "name": "otp.session.expiration",
+      "type": "java.lang.String",
+      "description": "OTP session expiration time."
+    },
+    {
+      "name": "jwt.secret",
+      "type": "java.lang.String",
+      "description": "Secret JWT key."
+    },
+    {
+      "name": "jwt.expiration",
+      "type": "java.lang.String",
+      "description": "JWT expiration time."
+    }
+  ]
+}

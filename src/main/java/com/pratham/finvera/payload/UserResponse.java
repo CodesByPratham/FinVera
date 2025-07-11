@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 
 import com.pratham.finvera.entity.User;
+import com.pratham.finvera.enums.Role;
 
 @Data
 @Builder
@@ -18,6 +19,7 @@ public class UserResponse {
     private String name;
     private String email;
     private String phone;
+    private Role role;
     private boolean verified;
     private Instant createdAt;
     private Instant updatedAt;
@@ -28,6 +30,7 @@ public class UserResponse {
                 .name(user.getName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
+                .role(user.getRole())
                 .verified(user.isVerified())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())

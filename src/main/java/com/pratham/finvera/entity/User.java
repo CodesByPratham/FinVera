@@ -1,5 +1,6 @@
 package com.pratham.finvera.entity;
 
+import com.pratham.finvera.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -29,4 +30,8 @@ public class User extends BaseEntity {
     @Column(name = "is_verified")
     @Builder.Default
     private boolean isVerified = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
 }

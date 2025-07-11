@@ -6,10 +6,10 @@ import com.pratham.finvera.dto.RegisterRequest;
 import com.pratham.finvera.dto.ResendOtpRequest;
 import com.pratham.finvera.dto.ResetPasswordRequest;
 import com.pratham.finvera.dto.VerifyOtpRequest;
-import com.pratham.finvera.entity.Admin;
 import com.pratham.finvera.entity.OtpToken;
 import com.pratham.finvera.entity.User;
 import com.pratham.finvera.enums.OtpPurpose;
+import com.pratham.finvera.enums.Role;
 import com.pratham.finvera.exception.BadRequestException;
 import com.pratham.finvera.exception.ResourceNotFoundException;
 import com.pratham.finvera.exception.UnauthorizedException;
@@ -17,35 +17,34 @@ import com.pratham.finvera.payload.AuthResponse;
 import com.pratham.finvera.payload.MessageResponse;
 import com.pratham.finvera.payload.OtpVerifiedResponse;
 import com.pratham.finvera.payload.UserResponse;
-import com.pratham.finvera.repository.AdminRepository;
 import com.pratham.finvera.repository.OtpTokenRepository;
 import com.pratham.finvera.repository.UserRepository;
-import com.pratham.finvera.security.AdminDetails;
 import com.pratham.finvera.security.CustomUserDetails;
 import com.pratham.finvera.util.JwtUtils;
 import com.pratham.finvera.util.OtpUtil;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+import org.slf4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
@@ -62,6 +61,7 @@ public class AuthService {
                 .name(request.getName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
+                .role(Role.ROLE_USER)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .isVerified(false) // set true after OTP later
                 .build();
@@ -214,13 +214,10 @@ public class AuthService {
     }
 
     public AuthResponse login(AuthRequest request) {
-
         Authentication authentication;
-
         try {
             authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.getEmail(), request.getPassword()));
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         } catch (DisabledException e) {
             throw new UnauthorizedException("Account not verified. Please verify OTP first.");
         } catch (AuthenticationException e) {
@@ -228,8 +225,8 @@ public class AuthService {
         }
 
         User user = ((CustomUserDetails) authentication.getPrincipal()).getUser();
-
-        String token = jwtUtils.generateToken(user.getEmail(), "ROLE_USER");
+        String token = jwtUtils.generateToken(user.getEmail(), user.getRole());
+        log.info("User {} logged in with role {}", user.getEmail(), user.getRole());
 
         return AuthResponse.builder()
                 .timestamp(Instant.now())
@@ -239,29 +236,4 @@ public class AuthService {
                 .user(UserResponse.fromUser(user))
                 .build();
     }
-
-    public AuthResponse adminLogin(AuthRequest request) {
-        
-        Optional<Admin> adminOpt = adminRepository.findByEmail(request.getEmail());
-        boolean authenticated = adminOpt.isPresent()
-                && passwordEncoder.matches(request.getPassword(), adminOpt.get().getPassword());
-
-        if (!authenticated) {
-            throw new UnauthorizedException("Invalid admin email or password.");
-        }
-
-        Admin admin = adminRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("Admin not found with email: " + request.getEmail()));
-
-        String token = jwtUtils.generateToken(admin.getEmail(), "ROLE_ADMIN");
-
-        return AuthResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.OK)
-                .message("Admin Login Successful.")
-                .token(token)
-                .user(null) // or you can create a separate AdminResponse DTO if needed
-                .build();
-    }
-
 }

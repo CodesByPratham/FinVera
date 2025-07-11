@@ -6,6 +6,8 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.pratham.finvera.enums.Role;
+
 import javax.crypto.SecretKey;
 
 import java.security.Key;
@@ -21,7 +23,7 @@ public class JwtUtils {
     private long jwtExpirationMs;
 
     // Generate JWT token
-    public String generateToken(String email, String role) {
+    public String generateToken(String email, Role role) {
         return Jwts.builder()
                 .subject(email)
                 .claim("role", role)

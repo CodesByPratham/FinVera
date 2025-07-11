@@ -7,13 +7,12 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @Getter
 public class OtpProperties {
-
     @Value("${otp.expiration}")
     private int otpExpiration;
 
-    @Value("${otp.sessionExpiration}")
+    @Value("${otp.session.expiration}")
     private int sessionExpiration;
 
-    @Value("${otp.cleanupFixedRateMs}")
+    @Value("${otp.cleanup.fixed.rate.ms}")
     private long cleanupFixedRateMs;
 }

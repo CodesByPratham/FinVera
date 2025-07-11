@@ -22,7 +22,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
     private final CustomUserDetailsService userDetailsService;
-    private final AdminDetailsService adminDetailsService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -50,14 +49,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // If username is present and user not yet authenticated
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            UserDetails userDetails;
-            String role = jwtUtils.getRoleFromToken(token);
-            if ("ROLE_ADMIN".equals(role)) {
-                userDetails = adminDetailsService.loadUserByUsername(username);
-            } else {
-                userDetails = userDetailsService.loadUserByUsername(username);
-            }
-            
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
             // Checks if the token is valid or not
             if (jwtUtils.isTokenValid(token)) {
                 // Creates a Spring Security authentication object
