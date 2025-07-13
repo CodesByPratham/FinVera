@@ -12,11 +12,9 @@ import com.pratham.finvera.enums.OtpPurpose;
 
 public interface OtpTokenRepository extends JpaRepository<OtpToken, Long> {
 
-    Optional<OtpToken> findByUserAndOtpAndPurpose(User user, String otp, OtpPurpose purpose);
+    Optional<OtpToken> findByPurposeAndUserAndOtp(OtpPurpose purpose, User user, String otp);
 
     Optional<OtpToken> findByUser(User user);
-
-    void deleteByUserAndPurpose(User user, OtpPurpose purpose);
 
     Optional<OtpToken> findByUserAndOtpSessionToken(User user, String otpSessionToken);
 

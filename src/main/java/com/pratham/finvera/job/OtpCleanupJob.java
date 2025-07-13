@@ -20,6 +20,7 @@ public class OtpCleanupJob {
 
     @Scheduled(fixedRateString = "#{@otpProperties.cleanupFixedRateMs}")
     public void cleanExpiredOtpTokens() {
+        
         Instant now = Instant.now();
         List<OtpToken> expiredTokens = otpTokenRepository.findAllByExpiresAtBefore(now);
 

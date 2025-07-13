@@ -12,6 +12,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuthResponse extends MessageResponse {
+
     private String token;
     private UserResponse user;
 }

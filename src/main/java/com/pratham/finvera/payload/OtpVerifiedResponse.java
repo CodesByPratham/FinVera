@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 @Data
 @SuperBuilder
 public class OtpVerifiedResponse extends MessageResponse {
+
     private Instant timestamp;
     private HttpStatus status;
     private String message;

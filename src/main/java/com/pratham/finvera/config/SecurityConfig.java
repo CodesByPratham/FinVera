@@ -26,39 +26,55 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    // Define the security filter chain that configures HTTP security for the app
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        // Disable CSRF as this is likely a stateless REST API
         http.csrf(csrf -> csrf.disable())
+                // Disable session creation; use JWT instead
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll() // login, register
+                        // Publicly accessible endpoints like login and register
+                        .requestMatchers("/api/auth/**").permitAll()
+                        // Allow public GET access to /public/**
                         .requestMatchers(HttpMethod.GET, "/public/**").permitAll()
+                        // Restrict /api/admin/** to users with ADMIN role
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // Restrict /api/user/** to users with USER role
                         .requestMatchers("/api/user/**").hasRole("USER")
+                        // All other requests require authentication
                         .anyRequest().authenticated())
+                // Set the authentication provider
                 .authenticationProvider(authenticationProvider())
+                // Add JWT filter before Spring’s default auth filter
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
+        return http.build(); // Build and return the security configuration
     }
 
+    // Define and configure the AuthenticationProvider using custom
+    // UserDetailsService and password encoder
     @Bean
-    public AuthenticationProvider authenticationProvider() {
+    AuthenticationProvider authenticationProvider() {
+        // Use DAO-based authentication
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder());
+        provider.setPasswordEncoder(passwordEncoder()); // Set password encoder to BCrypt
         return provider;
     }
 
+    // Define the password encoder bean using BCrypt (a strong hashing algorithm)
     @Bean
-    public PasswordEncoder passwordEncoder() {
+    PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // Define the authentication manager bean to retrieve AuthenticationManager from
+    // AuthenticationConfiguration
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
-            throws Exception {
-        return config.getAuthenticationManager();
+    AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager(); // Get the authentication manager from configuration
     }
 }

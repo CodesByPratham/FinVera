@@ -11,6 +11,11 @@ import java.time.Instant;
 import com.pratham.finvera.enums.OtpPurpose;
 
 @Entity
+@Table(name = "otp_tokens", indexes = {
+        @Index(name = "idx_otp_user_purpose_otp", columnList = "user_id, purpose, otp"),
+        @Index(name = "idx_otp_user", columnList = "user_id"),
+        @Index(name = "idx_otp_user_token", columnList = "user_id, otpSessionToken")
+})
 @Data
 @Builder
 @NoArgsConstructor

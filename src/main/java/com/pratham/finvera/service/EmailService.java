@@ -21,6 +21,7 @@ public class EmailService {
     private final SpringTemplateEngine templateEngine;
 
     // General purpose method to send templated emails
+    @Async
     public void sendEmail(String toEmail, String subject, String templateName, Map<String, Object> variables) {
         Context context = new Context();
         context.setVariables(variables);
@@ -41,11 +42,21 @@ public class EmailService {
         sendHtmlEmail(toEmail, "OTP Verification", htmlContent);
     }
 
+    @Async
     public void sendWelcomeEmail(String toEmail, String name) {
         sendEmail(
                 toEmail,
                 "Welcome to Finvera 🎉",
                 "welcome.html",
+                Map.of("name", name));
+    }
+
+    @Async
+    public void sendPasswordResetEmail(String toEmail, String name) {
+        sendEmail(
+                toEmail,
+                "Password Reset Successful",
+                "password-reset-success.html",
                 Map.of("name", name));
     }
 
@@ -61,5 +72,4 @@ public class EmailService {
             throw new EmailSendException("Failed to send email to " + to + ": " + e.getMessage());
         }
     }
-
 }

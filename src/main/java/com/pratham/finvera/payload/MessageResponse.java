@@ -14,6 +14,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MessageResponse {
+
     private Instant timestamp;
     private HttpStatus status;
     private String message;
