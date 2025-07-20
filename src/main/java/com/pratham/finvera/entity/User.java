@@ -1,5 +1,9 @@
 package com.pratham.finvera.entity;
 
+import java.time.LocalDate;
+
+import com.pratham.finvera.enums.AuthProvider;
+import com.pratham.finvera.enums.Gender;
 import com.pratham.finvera.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,20 +23,30 @@ public class User extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "profile_photo")
+    private String profilePhoto;
+
+    @Column(nullable = false)
     private String name;
+
+    private LocalDate dob;
+
+    @Enumerated(EnumType.STRING)
+    private Gender gender; // Enum: MALE, FEMALE, OTHER
 
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
     private String phone;
 
-    @Column(nullable = false)
     private String password;
 
-    @Column(name = "is_verified")
     @Builder.Default
+    @Column(name = "is_verified", nullable = false)
     private boolean isVerified = false;
+
+    @Enumerated(EnumType.STRING)
+    private AuthProvider authProvider;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

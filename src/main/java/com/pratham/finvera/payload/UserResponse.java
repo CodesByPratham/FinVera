@@ -19,7 +19,6 @@ public class UserResponse {
     private Long id;
     private String name;
     private String email;
-    private String phone;
     private Role role;
     private boolean verified;
     private Instant createdAt;
@@ -30,7 +29,6 @@ public class UserResponse {
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
-                .phone(user.getPhone())
                 .role(user.getRole())
                 .verified(user.isVerified())
                 .createdAt(user.getCreatedAt())

@@ -50,25 +50,13 @@ On request, compare token’s version vs DB version
 
 
 
-
 🔐 4. Security Headers
 Add HTTP headers to protect against XSS, clickjacking, etc.
-
 http.headers(headers -> headers
     .contentSecurityPolicy("default-src 'self'")
     .xssProtection(xss -> xss.block(true))
     .frameOptions(frame -> frame.sameOrigin())
 );
-
-
-
-🔐 5. Role-Based Access Control (RBAC)
-✅ You’ve added roles — use @PreAuthorize to protect specific actions.
-
-Example:
-@PreAuthorize("hasRole('ADMIN')")
-public ResponseEntity<?> deleteUser(...) { ... }
-
 
 
 🔐 6. Account Lockout & Login Attempt Throttling

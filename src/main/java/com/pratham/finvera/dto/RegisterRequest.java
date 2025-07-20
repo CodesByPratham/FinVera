@@ -17,10 +17,6 @@ public class RegisterRequest {
     @Email(message = "Email must be valid")
     private String email;
 
-    @NotBlank(message = "Phone is required")
-    @Pattern(regexp = "\\d{10}", message = "Phone must be 10 digits")
-    private String phone;
-
     @NotBlank(message = "Password is required")
     @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&]).{6,}$", message = "Password must have at least 6 characters, including uppercase, lowercase, digit, and special character")
     private String password;

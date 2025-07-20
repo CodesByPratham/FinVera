@@ -1,10 +1,14 @@
 package com.pratham.finvera.config;
 
 import com.pratham.finvera.entity.User;
+import com.pratham.finvera.enums.AuthProvider;
+import com.pratham.finvera.enums.Gender;
 import com.pratham.finvera.enums.Role;
 import com.pratham.finvera.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+
+import java.time.LocalDate;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -35,7 +39,10 @@ public class AdminInitializer implements CommandLineRunner {
                     .email(adminEmail)
                     .password(passwordEncoder.encode(adminPassword))
                     .name(adminName)
-                    .phone("0000000000") // placeholder
+                    .phone("+919157255961")
+                    .gender(Gender.MALE)
+                    .authProvider(AuthProvider.LOCAL)
+                    .dob(LocalDate.of(2003, 8, 3))
                     .role(Role.ROLE_ADMIN)
                     .isVerified(true)
                     .build();

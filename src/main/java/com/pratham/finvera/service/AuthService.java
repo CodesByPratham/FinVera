@@ -1,5 +1,11 @@
 package com.pratham.finvera.service;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+
+import com.pratham.finvera.config.OAuthProperties;
 import com.pratham.finvera.dto.AuthRequest;
 import com.pratham.finvera.dto.ForgotPasswordRequest;
 import com.pratham.finvera.dto.RegisterRequest;
@@ -8,6 +14,7 @@ import com.pratham.finvera.dto.ResetPasswordRequest;
 import com.pratham.finvera.dto.VerifyOtpRequest;
 import com.pratham.finvera.entity.OtpToken;
 import com.pratham.finvera.entity.User;
+import com.pratham.finvera.enums.AuthProvider;
 import com.pratham.finvera.enums.OtpPurpose;
 import com.pratham.finvera.enums.Role;
 import com.pratham.finvera.exception.BadRequestException;
@@ -36,6 +43,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Collections;
 
 @Slf4j
 @Service
@@ -49,6 +57,7 @@ public class AuthService {
     private final OtpUtil otpUtil;
     private final OtpTokenRepository otpTokenRepository;
     private final EmailService emailService;
+    private final OAuthProperties oAuthProperties;
 
     public MessageResponse register(RegisterRequest request) {
 
@@ -59,10 +68,9 @@ public class AuthService {
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
-                .phone(request.getPhone())
                 .role(Role.ROLE_USER)
+                .authProvider(AuthProvider.LOCAL)
                 .password(passwordEncoder.encode(request.getPassword()))
-                .isVerified(false) // set true after OTP later
                 .build();
 
         userRepository.save(user);
@@ -224,6 +232,58 @@ public class AuthService {
                 .status(HttpStatus.OK)
                 .message("Login Successful.")
                 .token(token)
+                .user(UserResponse.fromUser(user))
+                .build();
+    }
+
+    public AuthResponse loginWithGoogle(String idTokenString) {
+        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                .setAudience(Collections.singletonList(oAuthProperties.getClientId()))
+                .build();
+
+        GoogleIdToken idToken;
+        try {
+            idToken = verifier.verify(idTokenString);
+        } catch (Exception e) {
+            throw new UnauthorizedException("Invalid Google ID token.");
+        }
+
+        if (idToken == null) {
+            throw new UnauthorizedException("ID token verification failed.");
+        }
+
+        GoogleIdToken.Payload payload = idToken.getPayload();
+        String email = payload.getEmail();
+        String name = (String) payload.get("name");
+        String picture = (String) payload.get("picture");
+
+        // Check if user exists
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            // Register user if doesn't exist
+            User newUser = User.builder()
+                    .email(email)
+                    .name(name)
+                    .isVerified(true)
+                    .password(passwordEncoder.encode("SOCIAL_LOGIN"))
+                    .authProvider(AuthProvider.GOOGLE)
+                    .profilePhoto(picture)
+                    .role(Role.ROLE_USER)
+                    .build();
+
+            return userRepository.save(newUser);
+        });
+
+        log.info("User {} logged in with role {}", user.getEmail(), user.getRole());
+
+        String jwt = jwtUtils.generateToken(user.getEmail(), Role.ROLE_USER);
+
+        emailService.sendWelcomeEmail(user.getEmail(), user.getName());
+
+        return AuthResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.OK)
+                .message("Login via Google successful.")
+                .token(jwt)
                 .user(UserResponse.fromUser(user))
                 .build();
     }

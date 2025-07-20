@@ -32,7 +32,14 @@ public class SecurityConfig {
     // Define the security filter chain that configures HTTP security for the app
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // Disable CSRF as this is likely a stateless REST API
+        /*
+         * Reference: https://shorturl.at/kniSr
+         * CSRF protects against what is aptly titled a Cross Site Request Forgery.
+         * In this type of attack, a token such as a session ID, is stored in the
+         * browser's cookies. The default behavior is to send the cookies with a
+         * request to a site. Someone can exploit this default behavior to
+         * impersonate you and do malicious things.
+         */
         http.csrf(csrf -> csrf.disable())
                 // Disable session creation; use JWT instead
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -1,21 +1,3 @@
-📬 2. Email Templates Enhancement 
-You already have: 
-otp-verification.html 
-password-reset.html 
-password-reset-success.html 
-account-alert.html 
-welcome.html 
-Add: 
-🎉 Password changed alert (in case of suspicious activity) 
-❌ Account deactivation confirmation 
-🔄 Email update confirmation
-
-✅ 4. Support for Phone-based OTP (Future-proofing)
-If you ever plan to use SMS/WhatsApp:
-Keep OtpPurpose general.
-Add channel field (EMAIL / SMS) in OtpToken.
-Abstract OtpSenderService so you can plug in Twilio, etc.
-
 👤 3. Profile Module
 Add GET /api/users/me to fetch logged-in user data.
 Add PUT /api/users/me to update:
@@ -27,3 +9,9 @@ Three new fields we are going to take from user which is gender, dob and profile
 User cannot and will never be able to update email(Admin can but will implement admin later).
 User can update name, phone, dob, gender and password.
 For updating the password user has to provide old and new password to update the password.
+
+✅ 7. Notifications Module
+Let user receive alerts:
+Password changed
+New login from new device/IP
+Weekly financial summaries (Finvera-specific)
