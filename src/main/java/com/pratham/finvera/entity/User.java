@@ -26,19 +26,23 @@ public class User extends BaseEntity {
     @Column(name = "profile_photo")
     private String profilePhoto;
 
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false)
     private String name;
 
+    @Column(name = "dob")
     private LocalDate dob;
 
     @Enumerated(EnumType.STRING)
-    private Gender gender; // Enum: MALE, FEMALE, OTHER
+    @Column(name = "gender")
+    private Gender gender;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "email", unique = true, nullable = false)
     private String email;
 
+    @Column(name = "phone")
     private String phone;
 
+    @Column(name = "password", nullable = false)
     private String password;
 
     @Builder.Default
@@ -46,9 +50,10 @@ public class User extends BaseEntity {
     private boolean isVerified = false;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false)
     private AuthProvider authProvider;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "role", nullable = false)
     private Role role;
 }

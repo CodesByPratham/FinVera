@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.pratham.finvera.security.AuthEntryPointJwt;
 import com.pratham.finvera.security.CustomUserDetailsService;
 import com.pratham.finvera.security.JwtAuthenticationFilter;
 
@@ -28,6 +29,8 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    private final AuthEntryPointJwt authEntryPointJwt;
 
     // Define the security filter chain that configures HTTP security for the app
     @Bean
@@ -57,7 +60,9 @@ public class SecurityConfig {
                 // Set the authentication provider
                 .authenticationProvider(authenticationProvider())
                 // Add JWT filter before Spring’s default auth filter
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // Handle exception that occurs in Spring Security
+                .exceptionHandling((handling) -> handling.authenticationEntryPoint(authEntryPointJwt));
 
         return http.build(); // Build and return the security configuration
     }

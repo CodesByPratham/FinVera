@@ -27,7 +27,7 @@ import com.pratham.finvera.payload.UserResponse;
 import com.pratham.finvera.repository.OtpTokenRepository;
 import com.pratham.finvera.repository.UserRepository;
 import com.pratham.finvera.security.CustomUserDetails;
-import com.pratham.finvera.util.JwtUtils;
+import com.pratham.finvera.util.JwtUtil;
 import com.pratham.finvera.util.OtpUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -53,7 +53,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
-    private final JwtUtils jwtUtils;
+    private final JwtUtil jwtUtils;
     private final OtpUtil otpUtil;
     private final OtpTokenRepository otpTokenRepository;
     private final EmailService emailService;

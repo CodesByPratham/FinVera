@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-
 public class OtpUtil {
 
     private final OtpProperties otpProperties;

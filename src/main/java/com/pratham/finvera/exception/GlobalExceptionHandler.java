@@ -6,6 +6,7 @@ import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import com.pratham.finvera.payload.MessageResponse;
 
@@ -38,6 +39,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DisabledException.class)
     public ResponseEntity<MessageResponse> handleDisabledUser(DisabledException ex, WebRequest req) {
         return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Account not verified. Please verify OTP first.");
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<MessageResponse> handleNoHandlerFound(NoHandlerFoundException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, "Endpoint not found: " + ex.getRequestURL());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
