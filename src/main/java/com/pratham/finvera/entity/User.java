@@ -10,7 +10,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "users", indexes = {
-        @Index(name = "idx_user_email", columnList = "email")
+        @Index(name = "idx_users_email", columnList = "email"),
 })
 @Getter
 @Setter

@@ -1,7 +1,5 @@
 package com.pratham.finvera.controller;
 
-import java.security.Principal;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,7 +9,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.pratham.finvera.dto.ChangePasswordRequest;
 import com.pratham.finvera.dto.UpdateUserProfileRequest;
 import com.pratham.finvera.payload.MessageResponse;
-import com.pratham.finvera.payload.UserResponse;
 import com.pratham.finvera.service.UserService;
 
 import jakarta.validation.Valid;
@@ -28,7 +25,7 @@ public class UserController {
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<UserResponse> getProfile() {
+    public ResponseEntity<MessageResponse> getProfile() {
         return ResponseEntity.ok(userService.getCurrentUserProfile());
     }
 

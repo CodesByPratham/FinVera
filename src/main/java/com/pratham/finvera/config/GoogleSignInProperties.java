@@ -7,7 +7,7 @@ import lombok.Getter;
 
 @Configuration
 @Getter
-public class OAuthProperties {
-    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+public class GoogleSignInProperties {
+    @Value("${google.sign-in.client-id}")
     private String clientId;
 }

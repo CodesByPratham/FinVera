@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class GoogleOAuthRequest {
+public class GoogleSignInRequest {
 
     @NotBlank(message = "ID token is required")
     private String idToken;

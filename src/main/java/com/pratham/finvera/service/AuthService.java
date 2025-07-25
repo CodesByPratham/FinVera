@@ -4,8 +4,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
-
-import com.pratham.finvera.config.OAuthProperties;
+import com.pratham.finvera.config.GoogleSignInProperties;
 import com.pratham.finvera.dto.AuthRequest;
 import com.pratham.finvera.dto.ForgotPasswordRequest;
 import com.pratham.finvera.dto.RegisterRequest;
@@ -44,6 +43,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -57,35 +57,44 @@ public class AuthService {
     private final OtpUtil otpUtil;
     private final OtpTokenRepository otpTokenRepository;
     private final EmailService emailService;
-    private final OAuthProperties oAuthProperties;
+    private final GoogleSignInProperties googleSignInProperties;
 
     public MessageResponse register(RegisterRequest request) {
 
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email is already in use.");
-        }
+        Optional<User> presentUser = userRepository.findByEmail(request.getEmail());
+        User user;
 
-        User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
-                .role(Role.ROLE_USER)
-                .authProvider(AuthProvider.LOCAL)
-                .password(passwordEncoder.encode(request.getPassword()))
-                .build();
+        if (presentUser.isPresent()) {
+
+            user = presentUser.get();
+
+            if (user.isVerified()) {
+                // Case 2: User found with given email, and is verified.
+                throw new BadRequestException("Email already in use.");
+            }
+
+            // Case 3: User found with given email, and is not verified so update the user.
+            user.setName(request.getName());
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.setRole(Role.ROLE_USER);
+            user.setAuthProvider(AuthProvider.LOCAL);
+        } else {
+            // Case 1: No such user found with given email, hence register the user.
+            user = User.builder()
+                    .name(request.getName())
+                    .email(request.getEmail())
+                    .role(Role.ROLE_USER)
+                    .authProvider(AuthProvider.LOCAL)
+                    .password(passwordEncoder.encode(request.getPassword()))
+                    .build();
+            userRepository.save(user);
+        }
 
         userRepository.save(user);
 
-        otpTokenRepository.findByUser(user).ifPresent(otpTokenRepository::delete);
-        OtpToken otpToken = otpUtil.createOtpToken(user, OtpPurpose.REGISTER);
-        otpTokenRepository.save(otpToken);
+        sendOtp(user, OtpPurpose.REGISTER);
 
-        emailService.sendOtpEmail(user.getEmail(), otpToken.getOtp(), user.getName());
-
-        return MessageResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.OK)
-                .message("User registered successfully. Please verify OTP.")
-                .build();
+        return buildSuccessResponse("User registered successfully. Please verify OTP.");
     }
 
     public MessageResponse verifyOtp(VerifyOtpRequest request) {
@@ -95,12 +104,11 @@ public class AuthService {
                         "User not found with email: " + request.getEmail() + "."));
 
         OtpPurpose purpose = request.getPurpose();
-
         OtpToken otpToken = otpTokenRepository.findByPurposeAndUserAndOtp(purpose, user, request.getOtp())
                 .orElseThrow(() -> new BadRequestException("OTP is invalid."));
 
         if (otpToken.getExpiresAt().isBefore(Instant.now())) {
-            otpTokenRepository.delete(otpToken); // clean up
+            otpTokenRepository.delete(otpToken);
             throw new BadRequestException("OTP has expired. Please request a new one.");
         }
 
@@ -119,17 +127,12 @@ public class AuthService {
 
         emailService.sendWelcomeEmail(user.getEmail(), user.getName());
 
-        return MessageResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.OK)
-                .message("Account verified successfully.")
-                .build();
+        return buildSuccessResponse("Account verified successfully.");
     }
 
     private OtpVerifiedResponse handleForgotPasswordOtpVerification(User user, OtpToken otpToken) {
 
         otpUtil.attachSessionToken(otpToken);
-
         otpTokenRepository.save(otpToken);
 
         return OtpVerifiedResponse.builder()
@@ -152,17 +155,9 @@ public class AuthService {
             throw new BadRequestException("User is already verified.");
         }
 
-        otpTokenRepository.findByUser(user).ifPresent(otpTokenRepository::delete);
-        OtpToken otpToken = otpUtil.createOtpToken(user, request.getPurpose());
-        otpTokenRepository.save(otpToken);
+        sendOtp(user, purpose);
 
-        emailService.sendOtpEmail(user.getEmail(), otpToken.getOtp(), user.getName());
-
-        return MessageResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.OK)
-                .message("A new OTP has been sent to your email.")
-                .build();
+        return buildSuccessResponse("A new OTP has been sent to your email.");
     }
 
     public MessageResponse forgotPassword(ForgotPasswordRequest request) {
@@ -171,17 +166,9 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: "
                         + request.getEmail() + "."));
 
-        otpTokenRepository.findByUser(user).ifPresent(otpTokenRepository::delete);
-        OtpToken otpToken = otpUtil.createOtpToken(user, OtpPurpose.FORGOT_PASSWORD);
-        otpTokenRepository.save(otpToken);
+        sendOtp(user, OtpPurpose.FORGOT_PASSWORD);
 
-        emailService.sendOtpEmail(user.getEmail(), otpToken.getOtp(), user.getName());
-
-        return MessageResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.OK)
-                .message("OTP sent to your email for password reset.")
-                .build();
+        return buildSuccessResponse("OTP sent to your email for password reset.");
     }
 
     public MessageResponse resetPassword(ResetPasswordRequest request) {
@@ -204,11 +191,7 @@ public class AuthService {
 
         emailService.sendPasswordResetEmail(user.getEmail(), user.getName());
 
-        return MessageResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.OK)
-                .message("Password reset successfully.")
-                .build();
+        return buildSuccessResponse("Password reset successfully.");
     }
 
     public AuthResponse login(AuthRequest request) {
@@ -237,47 +220,45 @@ public class AuthService {
     }
 
     public AuthResponse loginWithGoogle(String idTokenString) {
-        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
-                .setAudience(Collections.singletonList(oAuthProperties.getClientId()))
-                .build();
 
-        GoogleIdToken idToken;
-        try {
-            idToken = verifier.verify(idTokenString);
-        } catch (Exception e) {
-            throw new UnauthorizedException("Invalid Google ID token.");
-        }
+        // Verify the received Google ID token using Google's public certificates
+        // This ensures the token is not tampered with and is issued for your app
+        GoogleIdToken idToken = verifyGoogleIdToken(idTokenString);
 
-        if (idToken == null) {
-            throw new UnauthorizedException("ID token verification failed.");
-        }
-
+        // Extract payload (user info) from the verified ID token
         GoogleIdToken.Payload payload = idToken.getPayload();
         String email = payload.getEmail();
         String name = (String) payload.get("name");
         String picture = (String) payload.get("picture");
 
-        // Check if user exists
+        // Try to find the user by email in the database
         User user = userRepository.findByEmail(email).orElseGet(() -> {
-            // Register user if doesn't exist
+
+            // If user does not exist, register them using data from Google
             User newUser = User.builder()
                     .email(email)
                     .name(name)
-                    .isVerified(true)
-                    .password(passwordEncoder.encode("SOCIAL_LOGIN"))
-                    .authProvider(AuthProvider.GOOGLE)
                     .profilePhoto(picture)
+                    .password(passwordEncoder.encode("SOCIAL_LOGIN"))
+                    .isVerified(true)
+                    .authProvider(AuthProvider.GOOGLE)
                     .role(Role.ROLE_USER)
                     .build();
 
-            return userRepository.save(newUser);
+            userRepository.save(newUser);
+            emailService.sendWelcomeEmail(newUser.getEmail(), newUser.getName());
+            return newUser;
         });
+
+        // Prevent users from logging in with Google if their account was created via password
+        if (user.getAuthProvider() != AuthProvider.GOOGLE) {
+            throw new BadRequestException(
+                    "This email is already registered via password. Please log in using email and password.");
+        }
 
         log.info("User {} logged in with role {}", user.getEmail(), user.getRole());
 
         String jwt = jwtUtils.generateToken(user.getEmail(), Role.ROLE_USER);
-
-        emailService.sendWelcomeEmail(user.getEmail(), user.getName());
 
         return AuthResponse.builder()
                 .timestamp(Instant.now())
@@ -285,6 +266,72 @@ public class AuthService {
                 .message("Login via Google successful.")
                 .token(jwt)
                 .user(UserResponse.fromUser(user))
+                .build();
+    }
+
+    /* 
+     * This method receives an idTokenString, which is a JWT (JSON Web Token) issued 
+     * by Google after a user logs in using Google Sign-In.
+     * 
+     * The method aims to verify the token's authenticity using Google's public keys 
+     * and confirm that it was issued for your app.
+     * 
+     * It returns a GoogleIdToken object if valid, or throws an UnauthorizedException 
+     * if the token is invalid.
+     */
+    private GoogleIdToken verifyGoogleIdToken(String idTokenString) {
+        try {
+            /* 
+             * GoogleIdTokenVerifier.Builder is used to build a verifier object that will perform the actual checks.
+             * It's part of the Google API Client Libraries (com.google.api.client.googleapis.auth.oauth2).
+             * The builder pattern is used here to configure the verifier before building it.
+             */
+            return new GoogleIdTokenVerifier.Builder(
+                    // NetHttpTransport is a transport mechanism used to fetch Google's public keys and certificates over HTTPS.
+                    new NetHttpTransport(),
+                    // GsonFactory is used to parse the JSON data (like the certificates and token payload) from Google's servers.
+                    new GsonFactory())
+
+                    /* 
+                     * .setAudience(...) ensures that the token was intended for your application.
+                     * he aud (audience) field in the ID token must match your app’s Client ID.
+                     * This is critical to prevent token reuse across apps.
+                     * Collections.singletonList(...) is used because Google ID tokens support 
+                     * multiple audiences, but you only expect one.
+                     */
+                    .setAudience(Collections.singletonList(googleSignInProperties.getClientId()))
+                    .build() // Finalizes the configuration and builds the GoogleIdTokenVerifier instance with all settings applied
+
+                    /* 
+                     * This line performs the actual verification of the token string:
+                     * Signature Verification: Checks that the token was signed by Google using its public keys.
+                     * Expiration Check: Ensures the token hasn’t expired (exp field).
+                     * Audience Check: Confirms that the token is meant for your app.
+                     * Issuer Check: Ensures the token comes from a trusted source (https://accounts.google.com or accounts.google.com).
+                     * 
+                     * If verification passes, it returns a GoogleIdToken object.
+                     * If verification fails (invalid, expired, tampered), it returns null.
+                     */
+                    .verify(idTokenString);
+
+        } catch (Exception e) {
+            throw new UnauthorizedException("Invalid Google ID token.");
+        }
+    }
+
+    private void sendOtp(User user, OtpPurpose purpose) {
+
+        otpTokenRepository.findByUser(user).ifPresent(otpTokenRepository::delete);
+        OtpToken otpToken = otpUtil.createOtpToken(user, purpose);
+        otpTokenRepository.save(otpToken);
+        emailService.sendOtpEmail(user.getEmail(), otpToken.getOtp(), user.getName());
+    }
+
+    private MessageResponse buildSuccessResponse(String message) {
+        return MessageResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.OK)
+                .message(message)
                 .build();
     }
 }

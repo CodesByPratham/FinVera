@@ -67,8 +67,8 @@ public class SecurityConfig {
         return http.build(); // Build and return the security configuration
     }
 
-    // Define and configure the AuthenticationProvider using custom
-    // UserDetailsService and password encoder
+    // Define and configure the AuthenticationProvider using custom UserDetailsService and password encoder.
+    // One can use In memory authentication provider, LDAP and many others as per the requirements.
     @Bean
     AuthenticationProvider authenticationProvider() {
         // Use DAO-based authentication

@@ -1,6 +1,12 @@
 package com.pratham.finvera.controller;
 
-import com.pratham.finvera.dto.*;
+import com.pratham.finvera.dto.AuthRequest;
+import com.pratham.finvera.dto.ForgotPasswordRequest;
+import com.pratham.finvera.dto.GoogleSignInRequest;
+import com.pratham.finvera.dto.RegisterRequest;
+import com.pratham.finvera.dto.ResendOtpRequest;
+import com.pratham.finvera.dto.ResetPasswordRequest;
+import com.pratham.finvera.dto.VerifyOtpRequest;
 import com.pratham.finvera.payload.AuthResponse;
 import com.pratham.finvera.payload.MessageResponse;
 import com.pratham.finvera.service.AuthService;
@@ -48,7 +54,7 @@ public class AuthController {
 	}
 
 	@PostMapping("/google")
-	public ResponseEntity<AuthResponse> loginWithGoogle(@Valid @RequestBody GoogleOAuthRequest request) {
+	public ResponseEntity<AuthResponse> loginWithGoogle(@Valid @RequestBody GoogleSignInRequest request) {
 		return ResponseEntity.ok(authService.loginWithGoogle(request.getIdToken()));
 	}
 }

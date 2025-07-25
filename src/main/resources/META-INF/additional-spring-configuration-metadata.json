@@ -39,6 +39,11 @@
       "name": "jwt.expiration",
       "type": "java.lang.String",
       "description": "JWT expiration time."
+    },
+    {
+      "name": "google.sign-in.client-id",
+      "type": "java.lang.String",
+      "description": "Google sign in client Id derived from the Google Cloud Console by registering the web client."
     }
   ]
 }
