@@ -2,6 +2,7 @@ package com.pratham.finvera.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +12,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import com.pratham.finvera.payload.MessageResponse;
 
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -53,6 +55,14 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining("; "));
 
         return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMessages);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<MessageResponse> handleInvalidFormat(HttpMessageNotReadableException ex) {
+        if (ex.getCause() != null && ex.getCause().getCause() instanceof DateTimeParseException) {
+            return buildErrorResponse(HttpStatus.BAD_REQUEST, "Date of birth must be in format yyyy-MM-dd");
+        }
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Invalid request body: " + ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

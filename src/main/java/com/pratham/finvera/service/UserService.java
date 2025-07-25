@@ -14,7 +14,6 @@ import com.pratham.finvera.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.time.Instant;
-import java.time.LocalDate;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -51,10 +50,12 @@ public class UserService {
                 () -> new UsernameNotFoundException("User not found with email: " + currentEmail + "."));
 
         user.setName(request.getName());
-        user.setPhone(request.getPhone());
-        user.setDob(request.getDob() == null ? null : LocalDate.parse(request.getDob()));
-        user.setGender(request.getGender() == null ? null : Gender.valueOf(request.getGender()));
-        user.setProfilePhoto(request.getProfilePhotoUrl());
+        user.setPhone(request.getPhone() == null || request.getPhone().isBlank() ? null : request.getPhone());
+        user.setDob(request.getDob() == null ? null : request.getDob());
+        user.setGender(request.getGender() == null || request.getGender().isBlank() ? null
+                : Gender.valueOf(request.getGender()));
+        user.setProfilePhoto(request.getProfilePhotoUrl() == null || request.getProfilePhotoUrl().isBlank() ? null
+                : request.getProfilePhotoUrl());
 
         userRepository.save(user);
 
