@@ -20,15 +20,15 @@ public class OtpCleanupJob {
 
     @Scheduled(fixedRateString = "#{@otpProperties.cleanupFixedRateMs}")
     public void cleanExpiredOtpTokens() {
-        
+
         Instant now = Instant.now();
         List<OtpToken> expiredTokens = otpTokenRepository.findAllByExpiresAtBefore(now);
 
         if (!expiredTokens.isEmpty()) {
             otpTokenRepository.deleteAll(expiredTokens);
-            log.info("Deleted {} expired OTP token(s).", expiredTokens.size());
+            log.info("Deleted {} expired OTP token(s)", expiredTokens.size());
         } else {
-            log.info("No expired OTP tokens found during cleanup.");
+            log.info("No expired OTP tokens found during cleanup");
         }
     }
 }

@@ -14,7 +14,6 @@ import com.pratham.finvera.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.time.Instant;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -33,12 +32,12 @@ public class UserService {
 
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(currentEmail).orElseThrow(
-                () -> new UsernameNotFoundException("User not found with email: " + currentEmail + "."));
+                () -> new UsernameNotFoundException("User not found with email: " + currentEmail));
 
         return GetUserResponse.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.OK)
-                .message("User found with email: " + currentEmail + ".")
+                .message("User found with email: " + currentEmail)
                 .user(UserResponse.fromUser(user))
                 .build();
     }
@@ -47,22 +46,21 @@ public class UserService {
 
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(currentEmail).orElseThrow(
-                () -> new UsernameNotFoundException("User not found with email: " + currentEmail + "."));
+                () -> new UsernameNotFoundException("User not found with email: " + currentEmail));
+
+        String gender = request.getGender();
 
         user.setName(request.getName());
-        user.setPhone(request.getPhone() == null || request.getPhone().isBlank() ? null : request.getPhone());
-        user.setDob(request.getDob() == null ? null : request.getDob());
-        user.setGender(request.getGender() == null || request.getGender().isBlank() ? null
-                : Gender.valueOf(request.getGender()));
-        user.setProfilePhoto(request.getProfilePhotoUrl() == null || request.getProfilePhotoUrl().isBlank() ? null
-                : request.getProfilePhotoUrl());
-
+        user.setPhone(request.getPhone());
+        user.setDob(request.getDob());
+        user.setGender(gender == null ? null : Gender.valueOf(gender));
+        user.setProfilePhoto(request.getProfilePhotoUrl());
         userRepository.save(user);
 
         return GetUserResponse.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.OK)
-                .message("Profile updated Successfully.")
+                .message("Profile updated Successfully")
                 .user(UserResponse.fromUser(user))
                 .build();
     }
@@ -71,14 +69,14 @@ public class UserService {
 
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(currentEmail).orElseThrow(
-                () -> new ResourceNotFoundException("User not found with email: " + currentEmail + "."));
+                () -> new ResourceNotFoundException("User not found with email: " + currentEmail));
 
         if (request.getOldPassword().equals(request.getNewPassword())) {
-            throw new BadRequestException("Old password and new password cannot be same.");
+            throw new BadRequestException("Old password and new password cannot be same");
         }
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
-            throw new BadRequestException("Old password is incorrect.");
+            throw new BadRequestException("Old password is incorrect");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -87,7 +85,7 @@ public class UserService {
         return MessageResponse.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.OK)
-                .message("Password updated successfully.")
+                .message("Password updated successfully")
                 .build();
     }
 }

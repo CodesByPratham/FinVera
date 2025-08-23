@@ -7,6 +7,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.pratham.finvera.config.GoogleSignInProperties;
 import com.pratham.finvera.dto.AuthRequest;
 import com.pratham.finvera.dto.ForgotPasswordRequest;
+import com.pratham.finvera.dto.GoogleSignInRequest;
 import com.pratham.finvera.dto.RegisterRequest;
 import com.pratham.finvera.dto.ResendOtpRequest;
 import com.pratham.finvera.dto.ResetPasswordRequest;
@@ -70,7 +71,7 @@ public class AuthService {
 
             if (user.isVerified()) {
                 // Case 2: User found with given email, and is verified.
-                throw new BadRequestException("Email already in use.");
+                throw new BadRequestException("User is already registered with email: " + user.getEmail());
             }
 
             // Case 3: User found with given email, and is not verified so update the user.
@@ -87,35 +88,33 @@ public class AuthService {
                     .authProvider(AuthProvider.LOCAL)
                     .password(passwordEncoder.encode(request.getPassword()))
                     .build();
-            userRepository.save(user);
         }
 
         userRepository.save(user);
 
         sendOtp(user, OtpPurpose.REGISTER);
 
-        return buildSuccessResponse("User registered successfully. Please verify OTP.");
+        return buildSuccessResponse("User registered successfully. Please verify OTP");
     }
 
     public MessageResponse verifyOtp(VerifyOtpRequest request) {
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found with email: " + request.getEmail() + "."));
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow(
+                () -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
 
-        OtpPurpose purpose = request.getPurpose();
+        OtpPurpose purpose = OtpPurpose.valueOf(request.getPurpose());
         OtpToken otpToken = otpTokenRepository.findByPurposeAndUserAndOtp(purpose, user, request.getOtp())
-                .orElseThrow(() -> new BadRequestException("OTP is invalid."));
+                .orElseThrow(() -> new BadRequestException("OTP is invalid"));
 
         if (otpToken.getExpiresAt().isBefore(Instant.now())) {
             otpTokenRepository.delete(otpToken);
-            throw new BadRequestException("OTP has expired. Please request a new one.");
+            throw new BadRequestException("OTP has expired. Please request a new one");
         }
 
         return switch (purpose) {
             case REGISTER -> handleRegisterOtpVerification(user, otpToken);
             case FORGOT_PASSWORD -> handleForgotPasswordOtpVerification(user, otpToken);
-            default -> throw new BadRequestException("Unsupported OTP purpose.");
+            default -> throw new BadRequestException("Unsupported OTP purpose");
         };
     }
 
@@ -127,7 +126,7 @@ public class AuthService {
 
         emailService.sendWelcomeEmail(user.getEmail(), user.getName());
 
-        return buildSuccessResponse("Account verified successfully.");
+        return buildSuccessResponse("Account verified successfully");
     }
 
     private OtpVerifiedResponse handleForgotPasswordOtpVerification(User user, OtpToken otpToken) {
@@ -138,51 +137,48 @@ public class AuthService {
         return OtpVerifiedResponse.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.OK)
-                .message("OTP verified.")
+                .message("OTP verified")
                 .otpSessionToken(otpToken.getOtpSessionToken())
                 .build();
     }
 
     public MessageResponse resendOtp(ResendOtpRequest request) {
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: "
-                        + request.getEmail() + "."));
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow(
+                () -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
 
-        OtpPurpose purpose = request.getPurpose();
+        OtpPurpose purpose = OtpPurpose.valueOf(request.getPurpose());
 
         if (purpose.equals(OtpPurpose.REGISTER) && user.isVerified()) {
-            throw new BadRequestException("User is already verified.");
+            throw new BadRequestException("User is already verified");
         }
 
         sendOtp(user, purpose);
 
-        return buildSuccessResponse("A new OTP has been sent to your email.");
+        return buildSuccessResponse("A new OTP has been sent to your email");
     }
 
     public MessageResponse forgotPassword(ForgotPasswordRequest request) {
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: "
-                        + request.getEmail() + "."));
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow(
+                () -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
 
         sendOtp(user, OtpPurpose.FORGOT_PASSWORD);
 
-        return buildSuccessResponse("OTP sent to your email for password reset.");
+        return buildSuccessResponse("OTP sent to your email for password reset");
     }
 
     public MessageResponse resetPassword(ResetPasswordRequest request) {
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: "
-                        + request.getEmail() + "."));
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow(
+                () -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
 
         OtpToken otpToken = otpTokenRepository.findByUserAndOtpSessionToken(user, request.getOtpSessionToken())
                 .orElseThrow(() -> new BadRequestException("Invalid OTP session token"));
 
         if (otpToken.getExpiresAt().isBefore(Instant.now())) {
             otpTokenRepository.delete(otpToken); // Clean up expired token
-            throw new BadRequestException("OTP session token has expired.");
+            throw new BadRequestException("OTP session token has expired");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -191,7 +187,7 @@ public class AuthService {
 
         emailService.sendPasswordResetEmail(user.getEmail(), user.getName());
 
-        return buildSuccessResponse("Password reset successfully.");
+        return buildSuccessResponse("Password reset successfully");
     }
 
     public AuthResponse login(AuthRequest request) {
@@ -201,9 +197,9 @@ public class AuthService {
             authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         } catch (DisabledException e) {
-            throw new UnauthorizedException("Account not verified. Please verify OTP first.");
+            throw new UnauthorizedException("Account not verified");
         } catch (AuthenticationException e) {
-            throw new BadRequestException("Invalid email or password.");
+            throw new BadRequestException("Invalid email or password");
         }
 
         User user = ((CustomUserDetails) authentication.getPrincipal()).getUser();
@@ -213,17 +209,17 @@ public class AuthService {
         return AuthResponse.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.OK)
-                .message("Login Successful.")
+                .message("Login Successful")
                 .token(token)
                 .user(UserResponse.fromUser(user))
                 .build();
     }
 
-    public AuthResponse loginWithGoogle(String idTokenString) {
+    public AuthResponse loginWithGoogle(GoogleSignInRequest request) {
 
         // Verify the received Google ID token using Google's public certificates
         // This ensures the token is not tampered with and is issued for your app
-        GoogleIdToken idToken = verifyGoogleIdToken(idTokenString);
+        GoogleIdToken idToken = verifyGoogleIdToken(request.getIdToken());
 
         // Extract payload (user info) from the verified ID token
         GoogleIdToken.Payload payload = idToken.getPayload();
@@ -253,7 +249,7 @@ public class AuthService {
         // Prevent users from logging in with Google if their account was created via password
         if (user.getAuthProvider() != AuthProvider.GOOGLE) {
             throw new BadRequestException(
-                    "This email is already registered via password. Please log in using email and password.");
+                    "This email is already registered via password. Please log in using email and password");
         }
 
         log.info("User {} logged in with role {}", user.getEmail(), user.getRole());
@@ -263,7 +259,7 @@ public class AuthService {
         return AuthResponse.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.OK)
-                .message("Login via Google successful.")
+                .message("Login via Google successful")
                 .token(jwt)
                 .user(UserResponse.fromUser(user))
                 .build();
@@ -315,7 +311,7 @@ public class AuthService {
                     .verify(idTokenString);
 
         } catch (Exception e) {
-            throw new UnauthorizedException("Invalid Google ID token.");
+            throw new UnauthorizedException("Invalid Google ID token");
         }
     }
 

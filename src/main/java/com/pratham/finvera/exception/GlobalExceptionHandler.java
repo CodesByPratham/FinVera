@@ -40,7 +40,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DisabledException.class)
     public ResponseEntity<MessageResponse> handleDisabledUser(DisabledException ex, WebRequest req) {
-        return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Account not verified. Please verify OTP first.");
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Account not verified. Please verify OTP first");
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)
@@ -67,7 +67,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<MessageResponse> handleGeneral(Exception ex, WebRequest req) {
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
     }
 
     private ResponseEntity<MessageResponse> buildErrorResponse(HttpStatus status, String message) {

@@ -27,6 +27,7 @@ public class UpdateUserProfileRequest {
     @Pattern(regexp = "^$|^(MALE|FEMALE|OTHER)$", message = "Gender must be either MALE, FEMALE or OTHER")
     private String gender;
 
+    @Size(max = 500, message = "Profile image URL must be at most 500 characters")
     @URL(message = "Profile photo must be a valid image URL")
     private String profilePhotoUrl;
 }
