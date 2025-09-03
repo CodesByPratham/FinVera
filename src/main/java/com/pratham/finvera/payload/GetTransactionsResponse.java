@@ -15,4 +15,5 @@ public class GetTransactionsResponse extends MessageResponse {
     private HttpStatus status;
     private String message;
     private List<TransactionResponse> transactions;
+    private Pagination pagination;
 }

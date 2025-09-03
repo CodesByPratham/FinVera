@@ -1,6 +1,7 @@
 package com.pratham.finvera.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -10,7 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.pratham.finvera.dto.BatchDeleteRequest;
-import com.pratham.finvera.dto.TransactionRequest;
+import com.pratham.finvera.dto.GetTransactionParamRequest;
+import com.pratham.finvera.dto.AddTransactionRequest;
 import com.pratham.finvera.payload.MessageResponse;
 import com.pratham.finvera.service.TransactionService;
 
@@ -21,13 +23,14 @@ import org.springframework.web.bind.annotation.PutMapping;
 @RestController
 @RequestMapping("/api/transactions")
 @RequiredArgsConstructor
+@Validated
 public class TransactionController {
 
     private final TransactionService transactionService;
 
     @GetMapping
-    public ResponseEntity<MessageResponse> getAllTransactions() {
-        return ResponseEntity.ok(transactionService.getAllTransactions());
+    public ResponseEntity<MessageResponse> getTransactions(@Valid GetTransactionParamRequest request) {
+        return ResponseEntity.ok(transactionService.getUserTransactions(request));
     }
 
     @GetMapping("/{id}")
@@ -36,13 +39,13 @@ public class TransactionController {
     }
 
     @PostMapping
-    public ResponseEntity<MessageResponse> addTransaction(@Valid @RequestBody TransactionRequest request) {
+    public ResponseEntity<MessageResponse> addTransaction(@Valid @RequestBody AddTransactionRequest request) {
         return ResponseEntity.ok(transactionService.addTransaction(request));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<MessageResponse> updateTransaction(
-            @PathVariable Long id, @Valid @RequestBody TransactionRequest request) {
+            @PathVariable Long id, @Valid @RequestBody AddTransactionRequest request) {
         return ResponseEntity.ok(transactionService.updateTransaction(id, request));
     }
 

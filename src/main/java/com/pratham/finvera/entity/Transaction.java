@@ -41,6 +41,9 @@ public class Transaction extends BaseEntity {
     @Column(nullable = false)
     private BigDecimal amount;
 
+    @Column(nullable = false)
+    private String title;
+
     @Enumerated(EnumType.STRING)
     private TransactionType type;
 

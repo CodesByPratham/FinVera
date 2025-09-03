@@ -5,13 +5,18 @@ import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import com.pratham.finvera.dto.BatchDeleteRequest;
-import com.pratham.finvera.dto.TransactionRequest;
+import com.pratham.finvera.dto.GetTransactionParamRequest;
+import com.pratham.finvera.dto.AddTransactionRequest;
 import com.pratham.finvera.entity.SubCategory;
 import com.pratham.finvera.entity.Transaction;
 import com.pratham.finvera.entity.User;
@@ -22,6 +27,7 @@ import com.pratham.finvera.exception.UnauthorizedException;
 import com.pratham.finvera.payload.GetTransactionResponse;
 import com.pratham.finvera.payload.GetTransactionsResponse;
 import com.pratham.finvera.payload.MessageResponse;
+import com.pratham.finvera.payload.Pagination;
 import com.pratham.finvera.payload.TransactionResponse;
 import com.pratham.finvera.repository.SubCategoryRepository;
 import com.pratham.finvera.repository.TransactionRepository;
@@ -37,7 +43,7 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final SubCategoryRepository subCategoryRepository;
 
-    public MessageResponse addTransaction(TransactionRequest request) {
+    public MessageResponse addTransaction(AddTransactionRequest request) {
 
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         System.out.println(email);
@@ -54,6 +60,7 @@ public class TransactionService {
         Transaction transaction = Transaction.builder()
                 .type(TransactionType.valueOf(request.getType()))
                 .amount(new BigDecimal(request.getAmount()))
+                .title(request.getTitle())
                 .subCategory(subCategory)
                 .description(request.getDescription())
                 .paymentType(payType == null ? null : PaymentType.valueOf(payType))
@@ -94,7 +101,7 @@ public class TransactionService {
                 .build();
     }
 
-    public MessageResponse updateTransaction(Long id, TransactionRequest request) {
+    public MessageResponse updateTransaction(Long id, AddTransactionRequest request) {
 
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
 
@@ -116,6 +123,7 @@ public class TransactionService {
 
         transaction.setAmount(new BigDecimal(request.getAmount()));
         transaction.setType(TransactionType.valueOf(request.getType()));
+        transaction.setTitle(request.getTitle());
         transaction.setSubCategory(subCategory);
         transaction.setDescription(request.getDescription());
         transaction.setPaymentType(payType == null ? null : PaymentType.valueOf(payType));
@@ -180,15 +188,20 @@ public class TransactionService {
                 .build();
     }
 
-    public MessageResponse getAllTransactions() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+    public MessageResponse getUserTransactions(GetTransactionParamRequest request) {
 
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email).orElseThrow(
                 () -> new UsernameNotFoundException("User not found with email: " + email));
 
-        List<Transaction> transactions = transactionRepository.findByUserId(user.getId());
+        // Build Pageable object
+        Sort sort = request.getSortDir().equalsIgnoreCase("asc") ? Sort.by(request.getSortBy()).ascending()
+                : Sort.by(request.getSortBy()).descending();
+        Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), sort);
 
-        List<TransactionResponse> transactionResponses = transactions.stream()
+        Page<Transaction> pagedTransactions = transactionRepository.findByUserId(user.getId(), pageable);
+
+        List<TransactionResponse> transactions = pagedTransactions.getContent().stream()
                 .map(TransactionResponse::fromTransaction)
                 .collect(Collectors.toList());
 
@@ -196,7 +209,8 @@ public class TransactionService {
                 .timestamp(Instant.now())
                 .status(HttpStatus.OK)
                 .message("Transactions retrieved successfully")
-                .transactions(transactionResponses)
+                .transactions(transactions)
+                .pagination(Pagination.fromPage(pagedTransactions))
                 .build();
     }
 }

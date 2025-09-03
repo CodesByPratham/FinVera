@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class TransactionRequest {
+public class AddTransactionRequest {
 
     @NotBlank(message = "Transaction type is required")
     @Pattern(regexp = "^(INCOME|EXPENSE)$", message = "Purpose must be either REGISTER or FORGOT_PASSWORD")
@@ -18,6 +18,10 @@ public class TransactionRequest {
     @NotBlank(message = "Amount is required")
     @Pattern(regexp = "^\\d+(\\.\\d{2})$", message = "Amount must be a valid number with exactly two decimal places")
     private String amount;
+
+    @NotBlank(message = "Title is required")
+    @Size(max = 50, message = "Title must be at most 50 characters")
+    private String title;
 
     @NotBlank(message = "Subcategory ID is required")
     @Pattern(regexp = "^\\d+$", message = "Subcategory ID must be a valid integer")

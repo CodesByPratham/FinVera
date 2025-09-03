@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.DisabledException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
@@ -13,6 +14,8 @@ import com.pratham.finvera.payload.MessageResponse;
 
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -49,12 +52,25 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<MessageResponse> handleValidationException(MethodArgumentNotValidException ex) {
-        String errorMessages = ex.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .collect(Collectors.joining("; "));
+    public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException ex) {
 
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMessages);
+        Map<String, Object> message = new HashMap<>();
+
+        message.put("timestamp", Instant.now());
+        message.put("status", HttpStatus.BAD_REQUEST);
+
+        Map<String, String> errors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .collect(Collectors.toMap(
+                        FieldError::getField,
+                        FieldError::getDefaultMessage,
+                        (msg1, msg2) -> msg1 + "; " + msg2 // merge if multiple errors on same field
+                ));
+
+        message.put("errors", errors);
+
+        return ResponseEntity.badRequest().body(message);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

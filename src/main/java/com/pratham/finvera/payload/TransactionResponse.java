@@ -19,6 +19,7 @@ import lombok.NoArgsConstructor;
 public class TransactionResponse {
     private Long id;
     private BigDecimal amount;
+    private String title;
     private TransactionType type;
     private String category;
     private String subCategory;
@@ -32,6 +33,7 @@ public class TransactionResponse {
         return TransactionResponse.builder()
                 .id(transaction.getId())
                 .amount(transaction.getAmount())
+                .title(transaction.getTitle())
                 .type(transaction.getType())
                 .category(transaction.getSubCategory().getCategory().getName())
                 .subCategory(transaction.getSubCategory().getName())
